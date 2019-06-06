@@ -10,9 +10,8 @@ mod = tf.load_op_library('./cuda_op_kernel.so')
 
 results = []
 
-for rep in range(7):
-
-    for size in [256, 1024, 2048]:
+for rep in range(1):
+    for size in [1024]:
 
         inputs = [np.random.uniform(0, 100, size=(size, 64, 512)) for _ in tqdm(range(10))]
 
@@ -25,7 +24,7 @@ for rep in range(7):
             # start = np.arange(16, dtype=float)
 
             ph = tf.placeholder('float', shape=(size, 64, 512))
-            res = mod.add_one(ph)
+            res = mod.max_kernel(ph)
 
             start = time.time()
             for inp in inputs:
@@ -64,14 +63,9 @@ for rep in range(7):
         for gpu_r, cpu_r in zip(gpu_results, cpu_results):
             assert np.allclose(gpu_r, cpu_r)
 
-with open('results.pkl', 'wb') as f:
-    pickle.dump(results, f, -1)
+# with open('results.pkl', 'wb') as f:
+#     pickle.dump(results, f, -1)
 
 
-# print(pd.DataFrame(results))
-
-    # print(actual[0, :10])
-
-    # print(expected[0, :10])
 
 

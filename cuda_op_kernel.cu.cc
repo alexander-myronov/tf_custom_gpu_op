@@ -3,17 +3,6 @@
 #include <stdio.h>
 #include <float.h>
 
-__device__ float atomicMaxf(float* address, float val)
-{
-    int *address_as_int =(int*)address;
-    int old = *address_as_int, assumed;
-    while (val > __int_as_float(old)) {
-        assumed = old;
-        old = atomicCAS(address_as_int, assumed,
-                        __float_as_int(val));
-        }
-    return __int_as_float(old);
-}
 
 __device__ void atomicMax(float* const address, const float value)
 {
@@ -130,75 +119,39 @@ __device__ void reduceMaxIdxOptimizedWarpShared(const float* __restrict__ input,
 }
 
 
-__global__ void AddOneKernel(const float* d_array,  float* d_max, float* d_max_init,
+__global__ void MaxKernel(const float* d_array,  float* d_max, float* d_max_init,
                                         const int batch_size,
                                         const int seq_len,
                                         const int n_features,
                                         const int k) {
 
-//    float cap = FLT_MAX;
     int index;
-//    float sum = 0;
 
-
-//
-//    return;
-//    for (int sample = 0; sample < batch_size; sample++){
-//        for (int feature = 0; feature < n_features; feature++){
-//            d_max_init[sample*n_features+feature] = FLT_MAX;
-//        }
-//    }
-//    __syncthreads();
-
-//    for (int k = 0; k<2; k++){
-        for (int sample = 0; sample < batch_size; sample++){
-            for (int feature = 0; feature < n_features; feature++){
-                reduceMaxIdxOptimizedWarpShared(
-                        d_array + sample * n_features * seq_len + feature * seq_len,
-                        seq_len,
-                        d_max+sample*n_features + feature,
-                         &index,
-                        FLT_MAX );
-                    __syncthreads();
-//                    d_max_init[sample*n_features+feature] = d_max[sample*n_features + feature];
-//                    __syncthreads();
+    for (int sample = 0; sample < batch_size; sample++){
+        for (int feature = 0; feature < n_features; feature++){
+            reduceMaxIdxOptimizedWarpShared(
+                    d_array + sample * n_features * seq_len + feature * seq_len,
+                    seq_len,
+                    d_max+sample*n_features + feature,
+                     &index,
+                    FLT_MAX );
+                __syncthreads();
 
 
 
-            }
-//            __syncthreads();
 
         }
-//        __syncthreads();
-//        for (int sample = 0; sample < batch_size; sample++){
-//            for (int feature = 0; feature < n_features; feature++){
-//            d_max_init[sample*n_features+feature] = 5;
-//        }
-//    }
-//
-//    }
-//    __syncthreads();
-//    }
+
+    }
+
     __syncthreads();
     return;
 }
 
-//void AddOneKernelLauncher(const float* in, const int N, float* out) {
-//  AddOneKernel<<<32, 256>>>(in, N, out, 1);
-//
-//  cudaError_t cudaerr = cudaDeviceSynchronize();
-//  if (cudaerr != cudaSuccess)
-//    printf("kernel launch failed with error \"%s\".\n", cudaGetErrorString(cudaerr));
-//}
-
-void AddOneKernelLauncher2(const float* in, float* out, float *max_init, const int batch_size, const int seq_len, const int n_features)
+void MaxKernelLauncher(const float* in, float* out, float *max_init, const int batch_size, const int seq_len, const int n_features)
 {
-//    for(int b=0;b<batch_size;b++)
-//        for (int f=0;f<n_features;f++)
-//            max_init[b*n_features+f] = 5;
 
-
-    AddOneKernel<<<32, 256>>>(in, out, max_init, batch_size, seq_len, n_features, 1);
+    MaxKernel<<<12, 1024>>>(in, out, max_init, batch_size, seq_len, n_features, 1);
 
   cudaError_t cudaerr = cudaDeviceSynchronize();
   if (cudaerr != cudaSuccess)

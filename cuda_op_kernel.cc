@@ -4,7 +4,7 @@
 
 using namespace tensorflow;  // NOLINT(build/namespaces)
 
-REGISTER_OP("AddOne")
+REGISTER_OP("MaxKernel")
     .Input("input: float32")
     .Output("output: float32")
     .SetShapeFn([](::tensorflow::shape_inference::InferenceContext* c) {
@@ -26,11 +26,11 @@ REGISTER_OP("AddOne")
     });
 
 //void AddOneKernelLauncher(const float* in, const int N, float* out);
-void AddOneKernelLauncher2(const float* in, float* out, float* max_init, const int batch_size, const int seq_len, const int n_features);
+void MaxKernelLauncher(const float* in, float* out, float* max_init, const int batch_size, const int seq_len, const int n_features);
 
-class AddOneOp : public OpKernel {
+class MaxOp : public OpKernel {
  public:
-  explicit AddOneOp(OpKernelConstruction* context) : OpKernel(context) {}
+  explicit MaxOp(OpKernelConstruction* context) : OpKernel(context) {}
 
   void Compute(OpKernelContext* ctx) override {
     // Get inputs
@@ -45,8 +45,6 @@ class AddOneOp : public OpKernel {
     // Allocate output tensor
     Tensor* output = nullptr;
     OP_REQUIRES_OK(ctx, ctx->allocate_output(0, output_shape, &output));
-
-
 
 
     // Get the Eigen tensors and pass them on the launcher
@@ -64,13 +62,12 @@ class AddOneOp : public OpKernel {
     OP_REQUIRES_OK(ctx, ctx->allocate_temp(DT_FLOAT,  TensorShape({batch_size, n_features}), &max_init));
     auto max_init_tensor = max_init.tensor<float, 2>();
 
-    AddOneKernelLauncher2(input_tensor.data(), output_tensor.data(), max_init_tensor.data(), batch_size, seq_len, n_features);
-//    launchCapsulePrediction(ctx->eigen_device(), input_tensor, weights_tensor,
-//      output_tensor);
+    MaxKernelLauncher(input_tensor.data(), output_tensor.data(), max_init_tensor.data(), batch_size, seq_len, n_features);
+
 
 
 
   }
 };
 
-REGISTER_KERNEL_BUILDER(Name("AddOne").Device(DEVICE_GPU), AddOneOp);
+REGISTER_KERNEL_BUILDER(Name("MaxKernel").Device(DEVICE_GPU), MaxOp);

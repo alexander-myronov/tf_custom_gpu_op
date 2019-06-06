@@ -71,13 +71,14 @@ y_val = y[int(len(X) * 0.9):]
 model = tf.keras.models.Sequential([
     # tf.keras.layers.Flatten(input_shape=(28, 28)),
     # tf.keras.layers.Dense(512, activation=tf.nn.relu),
-    tf.keras.layers.Conv1D(1, kernel_size=3, activation=tf.nn.relu, use_bias=False, padding='valid'),
+    tf.keras.layers.Conv1D(2, kernel_size=3, activation=tf.nn.relu, use_bias=False, padding='valid'),
     # tf.keras.layers.MaxPool2D(pool_size=(3, 3)),
-    tf.keras.layers.GlobalMaxPool1D(),
-    # tf.keras.layers.GlobalAveragePooling1D(),
+    # tf.keras.layers.GlobalMaxPool1D(),
+    tf.keras.layers.GlobalAveragePooling1D(),
     # tf.keras.layers.Flatten(),
     # tf.keras.layers.Dropout(0.2),
-    tf.keras.layers.Dense(1, activation=tf.nn.sigmoid, use_bias=False)
+    tf.keras.layers.Dense(1, activation=tf.nn.sigmoid, use_bias=False),
+    tf.keras.layers.Lambda()
 ])
 
 # input = tf.keras.layers.Input(shape=(10, 1))

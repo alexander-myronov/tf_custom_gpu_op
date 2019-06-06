@@ -8,7 +8,20 @@ REGISTER_OP("AddOne")
     .Input("input: float32")
     .Output("output: float32")
     .SetShapeFn([](::tensorflow::shape_inference::InferenceContext* c) {
-      c->set_output(0, c->input(0));
+//        auto in_shape = c->input(0);
+//        c->set_output(0, c->input(0));
+        tensorflow::shape_inference::ShapeHandle in_shape;
+        TF_RETURN_IF_ERROR(c->WithRank(c->input(0), 3, &in_shape));
+//
+//        // Construct and set the output shape
+//        DimensionHandle out_d0, out_d1, out_d2, out_d3;
+        std::vector<tensorflow::shape_inference::DimensionHandle> out_dims;
+        out_dims.push_back(c->MakeDim(c->Dim(c->input(0), 0)));
+        out_dims.push_back(c->MakeDim(c->Dim(c->input(0), 2)));
+        tensorflow::shape_inference::ShapeHandle out_shape = c->MakeShape(out_dims);
+        c->set_output(0, out_shape);
+//
+//    return Status::OK();
       return Status::OK();
     });
 

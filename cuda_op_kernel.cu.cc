@@ -76,20 +76,20 @@ __device__ void reduceMaxIdxOptimizedWarpShared(const float* __restrict__ input,
 
     if (0 == threadIdx.x)
     {
-        sharedMax1 = -1.0f;
+        sharedMax1 = 0.0f;
         sharedMaxIdx1  = 0;
     }
 
     __syncthreads();
 
-    float localMax1 = -1.0f;
+    float localMax1 = 0.0f;
     int localMaxIdx1 = 0;
 
 
     for (int i = threadIdx.x; i < size; i += blockDim.x)
     {
         float val = input[i];
-
+//        float cap =
         if (localMax1 < val && val < ignore)
         {
             localMax1 = val;
@@ -130,54 +130,75 @@ __device__ void reduceMaxIdxOptimizedWarpShared(const float* __restrict__ input,
 }
 
 
-__global__ void AddOneKernel(const float* d_array, const int elements, float* d_max, int k) {
+__global__ void AddOneKernel(const float* d_array,  float* d_max, float* d_max_init,
+                                        const int batch_size,
+                                        const int seq_len,
+                                        const int n_features,
+                                        const int k) {
 
-    float cap = FLT_MAX;
+//    float cap = FLT_MAX;
     int index;
-    float sum = 0;
-    for (int i = 0; i < k; i++){
-        reduceMaxIdxOptimizedWarpShared(d_array, elements, d_max+i, &index, cap);
-//        __syncthreads();
-        cap = d_max[i];
-        sum += d_max[i];
-    }
-    if(threadIdx.x == 0)
-        d_max[0] = sum / k;
-    return;
-    extern __shared__ float shared[];
-
-    int tid = threadIdx.x;
-    int gid = (blockDim.x * blockIdx.x) + tid;
-    shared[tid] = -FLT_MAX;
+//    float sum = 0;
 
 
+//
+//    return;
+//    for (int sample = 0; sample < batch_size; sample++){
+//        for (int feature = 0; feature < n_features; feature++){
+//            d_max_init[sample*n_features+feature] = FLT_MAX;
+//        }
+//    }
+//    __syncthreads();
 
-    while (gid < elements) {
-        shared[tid] = max(shared[tid], d_array[gid]);
-        gid += gridDim.x*blockDim.x;
+//    for (int k = 0; k<2; k++){
+        for (int sample = 0; sample < batch_size; sample++){
+            for (int feature = 0; feature < n_features; feature++){
+                reduceMaxIdxOptimizedWarpShared(
+                        d_array + sample * n_features * seq_len + feature * seq_len,
+                        seq_len,
+                        d_max+sample*n_features + feature,
+                         &index,
+                        FLT_MAX );
+                    __syncthreads();
+//                    d_max_init[sample*n_features+feature] = d_max[sample*n_features + feature];
+//                    __syncthreads();
+
+
+
+            }
+//            __syncthreads();
+
         }
+//        __syncthreads();
+//        for (int sample = 0; sample < batch_size; sample++){
+//            for (int feature = 0; feature < n_features; feature++){
+//            d_max_init[sample*n_features+feature] = 5;
+//        }
+//    }
+//
+//    }
+//    __syncthreads();
+//    }
     __syncthreads();
-    gid = (blockDim.x * blockIdx.x) + tid;  // 1
-    for (unsigned int s=blockDim.x/2; s>0; s>>=1)
-    {
-        if (tid < s && gid < elements)
-            shared[tid] = max(shared[tid], shared[tid + s]);
-        __syncthreads();
-    }
-
-//    atomicMaxf(d_max+tid, shared[tid]);
-//    d_max[gid] = shared[tid];
-    if (tid == 0){
-      atomicMaxf(d_max, shared[0]);
-//      atomicMaxf(d_max+1, shared[1]);
-//      atomicMaxf(d_max+2, shared[2]);
-//      d_max[0] = shared[0];
-    }
-
+    return;
 }
 
-void AddOneKernelLauncher(const float* in, const int N, float* out) {
-  AddOneKernel<<<32, 256>>>(in, N, out, 1);
+//void AddOneKernelLauncher(const float* in, const int N, float* out) {
+//  AddOneKernel<<<32, 256>>>(in, N, out, 1);
+//
+//  cudaError_t cudaerr = cudaDeviceSynchronize();
+//  if (cudaerr != cudaSuccess)
+//    printf("kernel launch failed with error \"%s\".\n", cudaGetErrorString(cudaerr));
+//}
+
+void AddOneKernelLauncher2(const float* in, float* out, float *max_init, const int batch_size, const int seq_len, const int n_features)
+{
+//    for(int b=0;b<batch_size;b++)
+//        for (int f=0;f<n_features;f++)
+//            max_init[b*n_features+f] = 5;
+
+
+    AddOneKernel<<<32, 256>>>(in, out, max_init, batch_size, seq_len, n_features, 1);
 
   cudaError_t cudaerr = cudaDeviceSynchronize();
   if (cudaerr != cudaSuccess)

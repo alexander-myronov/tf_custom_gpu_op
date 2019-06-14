@@ -2,3 +2,5 @@ CMakeFiles
 .idea
 *.pyc
 .ipynb_checkpoints
+*.o
+*.so
